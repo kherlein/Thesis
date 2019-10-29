@@ -42,7 +42,7 @@ efficiencies( fireTimeVar )
 # Technical Efficiency Effects Frontier (Battese & Coelli 1995)
 # (efficiency effects model with intercept)
 fireZ <- sfa( log( Daily_Held_noneg ) ~ log( Crew ) + log( Helicopter ) + log( Air ) + log( Engine ) + log( Dozer ) |
-                EDYRS + BANRAT, data = fireProdPhil )
+                RH_max + temp_max + agric_wind_max + perc_river + perc_road + Timber, data = firePanel )
 summary( fireZ )
 efficiencies( fireZ )
 
@@ -50,14 +50,14 @@ efficiencies( fireZ )
 # Technical Efficiency Effects Frontier (Battese & Coelli 1995)
 # (efficiency effects model without intercept)
 fireZ2 <- sfa( log( Daily_Held_noneg ) ~ log( Crew ) + log( Helicopter ) + log( Air ) + log( Engine ) + log( Dozer ) |
-                 EDYRS + BANRAT - 1, data = fireProdPhil )
+                 RH_max + temp_max + agric_wind_max +  perc_river + perc_road + Timber - 1, data = firePanel )
 summary( fireZ2 )
 efficiencies( fireZ2 )
 
 
 # Cost Frontier (with land as quasi-fixed input)
-fireProdPhil$cost <- fireProdPhil$LABOR * fireProdPhil$LABORP +
-  fireProdPhil$NPK * fireProdPhil$NPKP
-fireCost <- sfa( log( cost ) ~ log( PROD ) + log( AREA ) + log( LABORP )
-                 + log( NPKP ), data = fireProdPhil, ineffDecrease = FALSE )
-summary( fireCost )
+#fireProdPhil$cost <- fireProdPhil$LABOR * fireProdPhil$LABORP +
+#  fireProdPhil$NPK * fireProdPhil$NPKP
+#fireCost <- sfa( log( cost ) ~ log( PROD ) + log( AREA ) + log( LABORP )
+#                 + log( NPKP ), data = fireProdPhil, ineffDecrease = FALSE )
+#summary( fireCost )
