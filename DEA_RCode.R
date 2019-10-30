@@ -9,16 +9,27 @@ Ycross = join.gis.weather.ops.nozero[c('Daily_Held_noneg')]
 Xcross = join.gis.weather.ops.nozero[c('Crew', 'Helicopter', 'Air', 'Engine', 'Dozer')]
 #W = firePanel[c('labor_price', 'capital_price')]
 
-## Input-oriented DEA score under variable returns-to-scale
-di = dea(XREF=Xcross, YREF=Ycross, X=Xcross, Y=Ycross, model="output", RTS="variable")
-di$thetaOpt
-di
+## Naive Input-oriented DEA score under variable returns-to-scale
+dea.xs = dea(XREF=Xcross, YREF=Ycross, X=Xcross, Y=Ycross, model="output", RTS="variable")
+# Theta = Technical efficiency estimates
+dea.xs$thetaOpt
+
+dea.xs
 
 #test for returns to scale
 #not rejecting null indicates RTS are constant
 # need to check which bandwidtch to use as smoothing parameter, cv ,bw.ucv, silverman, or bc.nrd0
-rts.test(X, Y, W=NULL, model = "output", "constant", "cv", 100, 0.05)
+rts.test(Xcross, Ycross, W=NULL, model = "output", "constant", "cv", 100, 0.05)
 
+
+
+
+## Naive Input-oriented DEA score under variable returns-to-scale
+dea.xs.robust = dea.robust(X=Xcross, Y=Ycross, model="output", RTS="variable")
+# Theta = Technical efficiency estimates
+dea.xs.robust$theta_hat
+
+#dea.xs.robust
 
 #######      PANEL STRUCTURE     #####################################
 ######################################################################
@@ -28,18 +39,11 @@ Ypanel = firePanel[c('Daily_Held_noneg')]
 Xpanel = firePanel[c('Crew', 'Helicopter', 'Air', 'Engine', 'Dozer')]
 #W = firePanel[c('labor_price', 'capital_price')]
 
-## Naive input-oriented DEA score for the first 20 firms under variable returns-to-scale
+## Naive output-oriented DEA score under variable returns-to-scale
 #firms=1:6
-di_panel = dea(XREF=Xpanel, YREF=Ypanel, X=Xpanel, Y=Ypanel, model="output", RTS="variable")
-di_panel$thetaOpt
+dea.panel = dea(XREF=Xpanel, YREF=Ypanel, X=Xpanel, Y=Ypanel, model="output", RTS="variable")
+dea.panel$thetaOpt
 
-
-
-## Naive DEA score in cost-minimization model for the first 20 firms under variable returns-to-scale
-#ci_naive = dea(XREF=X, YREF=Y, X=X[firms,], Y=Y[firms,], W=W[firms,],
-#               model="costmin", RTS="variable")
-#ci_naive$XOpt
-#ci_naive$gammaOpt
 
 #test for returns to scale
 rts.test(X, Y, W=NULL, model, H0, bw, B, alpha)
