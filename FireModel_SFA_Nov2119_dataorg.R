@@ -24,26 +24,41 @@ rh.max <- all.weather %>%
   summarize(RH_max = max(relative_humidity), temp_max = max(dry_bulb_temperature), wind_max = max(wind_gust_kmh, na.rm = TRUE ), agric_wind_max = max(wind_agric)) %>%
   as.data.frame()
 
-air.date <- air %>% 
-  mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d %H:%M")) %>% 
-  group_by(FireID, weather_date, WING_TYPE, AIRCRAFT_CLASS) %>% 
-  summarize(airtotal = sum(TOTAL_AIRCRAFT_PER_DAY, na.rm = TRUE) ) %>%
-  as.data.frame()
-
-
-  
 gis.data.date <- gis.data %>%
   mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d"))
 
+unique(air$AIRCRAFT_CLASS)
+air.date.sum <- air %>% 
+  mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d")) %>% 
+  group_by(FireID, weather_date) %>% 
+  summarize(airtotal = sum(TOTAL_AIRCRAFT_PER_DAY, na.rm = TRUE) ) %>%
+   # spread(key= AIRCRAFT_CLASS,
+   #       value=TOTAL_AIRCRAFT_PER_DAY) %>%
+  # group_by(FireID, weather_date) %>% 
+  as.data.frame()
 
-air.date <- air %>% 
-  mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d %H:%M")) 
+unique(equip$EQUIPMENT_TYPE)
 
 equip.date <- equip %>% 
-  mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d %H:%M"))
+  mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d")) %>% 
+  group_by(FireID, weather_date) %>% 
+  filter(EQUIPMENT_TYPE=="Truck -Water Tank Truck") %>% 
+  select(c(FireID, weather_date, TOTAL_EQUIPMENT_PER_DAY)) %>% 
+  as.data.frame()
+colnames(equip.date)[colnames(equip.date)=="TOTAL_EQUIPMENT_PER_DAY"] <- "equiptotal"
 
-crew.date <- crew %>% 
-  mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d %H:%M"))
+
+
+unique(crew$POSITION)
+unique(crew.date$POSITION)
+crew.date.sum <- crew %>% 
+  mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d")) %>% 
+  group_by(FireID, weather_date) %>% 
+  filter(FUNCTION=="Operations") %>% 
+  summarize(crewtotal = sum(TOTAL_PERSONNEL_PER_DAY, na.rm = TRUE) ) %>%
+  as.data.frame()
+
+
 
 
 #checking that date conversion is correct
@@ -51,9 +66,12 @@ is.Date(gis.data.date$weather_date)
 is.Date(rh.max$weather_date)
 
 join.gis.weather <-  left_join(gis.data.date, rh.max, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
-join.gis.weather.ops <- left_join(join.gis.weather, operations.date, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
-
-
+join.crew <- left_join(join.gis.weather, crew.date.sum, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
+join.air <- left_join(join.crew, air.date.sum, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
+join.final <- left_join(join.air, equip.date, by = c("FireID" = "FireID", "weather_date" = "weather_date")) %>% 
+  mutate(crewtotal=ifelse(is.na(crewtotal),0,crewtotal)) %>% 
+  mutate(airtotal=ifelse(is.na(airtotal),0,airtotal)) %>% 
+  mutate(equip=ifelse(is.na(x1),0,x1))
 
 #changins 0's to 1's so that row doesn't get dropped from SFA
 join.gis.weather.ops.nozero <- join.gis.weather.ops %>% 
