@@ -71,10 +71,18 @@ join.air <- left_join(join.crew, air.date.sum, by = c("FireID" = "FireID", "weat
 join.final <- left_join(join.air, equip.date, by = c("FireID" = "FireID", "weather_date" = "weather_date")) %>% 
   mutate(crewtotal=ifelse(is.na(crewtotal),0,crewtotal)) %>% 
   mutate(airtotal=ifelse(is.na(airtotal),0,airtotal)) %>% 
-  mutate(equip=ifelse(is.na(x1),0,x1))
+  mutate(equiptotal=ifelse(is.na(equiptotal),0,equiptotal))
 
 #changins 0's to 1's so that row doesn't get dropped from SFA
-join.gis.weather.ops.nozero <- join.gis.weather.ops %>% 
-  mutate(Daily_Held_noneg = ifelse(Daily_Held_Perim <= 0,1,Daily_Held_Perim))
+#Adding dummy variables for inputs
+join.final <- join.final %>% 
+  mutate(Daily_Held_noneg = ifelse(Daily_Held_Perim <= 0,1,Daily_Held_Perim)) %>% 
+  mutate(air_d = ifelse(airtotal == 0,1,0)) %>% 
+  mutate(crew_d = ifelse(crewtotal == 0,1,0)) %>% 
+  mutate(equip_d = ifelse(equiptotal == 0,1,0))
+
 
 #Continue to Frontier_R_Code for analysis code
+  
+  
+  
