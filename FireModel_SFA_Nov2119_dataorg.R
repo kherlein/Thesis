@@ -1,7 +1,11 @@
 #ImportData
 gis.data <- read.csv(file="GISData_Oct0119.csv", header=TRUE, sep=",")
 colnames(gis.data)[colnames(gis.data)=="CAPTURE_DA"] <- "weather_date"
+
 all.weather <- read.csv(file="20174stations.csv")
+
+status.data <- read.csv(file="DailyFireStatus_GOVDATA.csv", header=TRUE, sep=",")
+colnames(status.data)[colnames(status.data)=="Date"] <- "weather_date"
 
 air <- read.csv(file="Aircraft_HWF_2017.csv", header=TRUE, sep=",")
 colnames(air)[colnames(air)=="DATE_WORKED"] <- "weather_date"
@@ -17,6 +21,7 @@ colnames(crew)[colnames(crew)=="FIRE_NUMBER"] <- "FireID"
 
 require(dplyr)
 require(lubridate)
+require(tidyr)
 
 rh.max <- all.weather %>% 
   mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d %H:%M")) %>% 
@@ -25,6 +30,9 @@ rh.max <- all.weather %>%
   as.data.frame()
 
 gis.data.date <- gis.data %>%
+  mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d"))
+
+status.data.date <- status.data %>%
   mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d"))
 
 unique(air$AIRCRAFT_CLASS)
@@ -66,7 +74,8 @@ is.Date(gis.data.date$weather_date)
 is.Date(rh.max$weather_date)
 
 join.gis.weather <-  left_join(gis.data.date, rh.max, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
-join.crew <- left_join(join.gis.weather, crew.date.sum, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
+join.status <- left_join(join.gis.weather, status.data.date, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
+join.crew <- left_join(join.status, crew.date.sum, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
 join.air <- left_join(join.crew, air.date.sum, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
 join.final <- left_join(join.air, equip.date, by = c("FireID" = "FireID", "weather_date" = "weather_date")) %>% 
   mutate(crewtotal=ifelse(is.na(crewtotal),0,crewtotal)) %>% 
@@ -81,7 +90,7 @@ join.final <- join.final %>%
   mutate(crew_d = ifelse(crewtotal == 0,1,0)) %>% 
   mutate(equip_d = ifelse(equiptotal == 0,1,0))
 
-
+summary(join.final)
 #Continue to Frontier_R_Code for analysis code
   
   

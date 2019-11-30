@@ -8,6 +8,7 @@ require(plm)
 #   Dropping SWF fire due to no crew data!!!!
 
 join.final.noSWF <- join.final %>% filter(FireID != "SWF107")
+summary(join.final.noSWF)
 
 
 # Cobb-Douglas production frontier
@@ -41,9 +42,12 @@ summary( cobbDouglas )
 library( "plm" )
 firePanel <- pdata.frame( join.final.noSWF, c( "FireID", "FireDayActual" ) )
 
+require(ExPanDaR)
+ExPanD(df = firePanel, cs_id = "FireID", ts_id = "FireDayActual")
+
 # Error Components Frontier (Battese & Coelli 1992)
 # with time-invariant efficiencies
-fireTimeInv <- sfa( log( Daily_Held_noneg ) ~ log(pmax( crewtotal, crew_d)) + log(pmax(airtotal, air_d)),
+fireTimeInv <- sfa( log( Daily_Held_noneg ) ~ log(pmax(crewtotal, crew_d)) + log(pmax(airtotal, air_d)),
                     data = firePanel )
 summary( fireTimeInv )
 efficiencies( fireTimeInv )
@@ -51,24 +55,26 @@ efficiencies( fireTimeInv )
 
 # Error Components Frontier (Battese & Coelli 1992)
 # with time-variant efficiencies
-fireTimeVar <- sfa( log( Daily_Held_noneg ) ~ log(pmax( crewtotal, crew_d)) + log(pmax(airtotal, air_d)),
-                    data = firePanel, timeEffect = TRUE )
-summary( fireTimeVar )
-efficiencies( fireTimeVar )
+fireTimeVar <- sfa( log(Daily_Held_noneg) ~ log(pmax(crewtotal, crew_d)) + log(pmax(airtotal, air_d)),
+                    data = firePanel, timeEffect = TRUE)
+summary(fireTimeVar)
+efficiencies(fireTimeVar)
 
 # Technical Efficiency Effects Frontier (Battese & Coelli 1995)
 # (efficiency effects model with intercept)
-fireZ <- sfa( log( Daily_Held_noneg ) ~ log(pmax( crewtotal, crew_d)) + log(pmax(airtotal, air_d)) |
-                RH_max + temp_max + agric_wind_max + perc_river + perc_road + Timber, data = firePanel )
-summary( fireZ )
-efficiencies( fireZ )
+fireZ <- sfa(log( Daily_Held_noneg ) ~ log(pmax( crewtotal, crew_d)) + log(pmax(airtotal, air_d)) |
+                RH_max + temp_max + agric_wind_max + perc_river + perc_road + Timber + 
+                PreviousFire + relativedays, data = firePanel )
+summary(fireZ)
+efficiencies(fireZ)
 
 
 # Technical Efficiency Effects Frontier (Battese & Coelli 1995)
 # (efficiency effects model without intercept)
 # Added max and dummy variables to match Battese 1997 specification for frequent 0 observations
 fireZ2 <- sfa( log( Daily_Held_noneg ) ~ crew_d + air_d + log(pmax( crewtotal, crew_d)) + log(pmax(airtotal, air_d))|
-                 RH_max + temp_max + agric_wind_max +  perc_river + perc_road + Timber + PreviousFire - 1, data = firePanel )
+                 RH_max + temp_max + agric_wind_max +  perc_river + perc_road + Timber + 
+                 PreviousFire + relativedays - 1, data = firePanel)
 summary( fireZ2 )
 efficiencies( fireZ2 )
 
