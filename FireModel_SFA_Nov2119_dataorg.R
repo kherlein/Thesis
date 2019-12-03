@@ -1,10 +1,10 @@
 #ImportData
-gis.data <- read.csv(file="GISData_Oct0119.csv", header=TRUE, sep=",")
+gis.data <- read.csv(file="GISData_Nov29.csv", header=TRUE, sep=",")
 colnames(gis.data)[colnames(gis.data)=="CAPTURE_DA"] <- "weather_date"
 
 all.weather <- read.csv(file="20174stations.csv")
 
-status.data <- read.csv(file="DailyFireStatus_GOVDATA.csv", header=TRUE, sep=",")
+status.data <- read.csv(file="firestatus_norepeats_nov29.csv", header=TRUE, sep=",")
 colnames(status.data)[colnames(status.data)=="Date"] <- "weather_date"
 
 air <- read.csv(file="Aircraft_HWF_2017.csv", header=TRUE, sep=",")
@@ -23,11 +23,24 @@ require(dplyr)
 require(lubridate)
 require(tidyr)
 
-rh.max <- all.weather %>% 
+weather <- all.weather %>% 
   mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d %H:%M")) %>% 
   group_by(FireID, weather_date) %>% 
   summarize(RH_max = max(relative_humidity), temp_max = max(dry_bulb_temperature), wind_max = max(wind_gust_kmh, na.rm = TRUE ), agric_wind_max = max(wind_agric)) %>%
   as.data.frame()
+
+rh.lag <- all.weather %>% 
+  mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d %H:%M")) %>% 
+  group_by(FireID, weather_date) %>% 
+  summarize(RH_lag = max(relative_humidity)) %>%
+  as.data.frame()
+
+require( "plm" )
+rh.panel <- pdata.frame(rh.lag, c("FireID", "weather_date"))
+
+rh.panel.lag <- lag(rh.panel$RH_lag, k=1, shift="time") %>%  
+   left_join(rh.panel, rh.lag) %>% 
+   as.data.frame()
 
 gis.data.date <- gis.data %>%
   mutate(weather_date=as.Date(weather_date, format = "%Y-%m-%d"))
@@ -71,16 +84,17 @@ crew.date.sum <- crew %>%
 
 #checking that date conversion is correct
 is.Date(gis.data.date$weather_date)
-is.Date(rh.max$weather_date)
+is.Date(weather$weather_date)
 
-join.gis.weather <-  left_join(gis.data.date, rh.max, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
+join.gis.weather <-  left_join(gis.data.date, weather, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
 join.status <- left_join(join.gis.weather, status.data.date, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
 join.crew <- left_join(join.status, crew.date.sum, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
 join.air <- left_join(join.crew, air.date.sum, by = c("FireID" = "FireID", "weather_date" = "weather_date"))
 join.final <- left_join(join.air, equip.date, by = c("FireID" = "FireID", "weather_date" = "weather_date")) %>% 
   mutate(crewtotal=ifelse(is.na(crewtotal),0,crewtotal)) %>% 
   mutate(airtotal=ifelse(is.na(airtotal),0,airtotal)) %>% 
-  mutate(equiptotal=ifelse(is.na(equiptotal),0,equiptotal))
+  mutate(equiptotal=ifelse(is.na(equiptotal),0,equiptotal)) %>% 
+  mutate(relativedays= FireDayActual/nogrowthday.x*100)
 
 #changins 0's to 1's so that row doesn't get dropped from SFA
 #Adding dummy variables for inputs
