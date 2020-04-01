@@ -43,8 +43,8 @@ ExPanD(df = firePanel, cs_id = "FireID", ts_id = "FireDayActual")
 ###############################################
 ############ Create Correlation Plot
 # install.packages("corrplot")
-# library("corrplot")
-# library("corrgram")
+library("corrplot")
+library("corrgram")
 my.num.data <- join.final[, sapply(join.final, is.numeric)] %>%
   select(Daily_Held_noneg, crew_d, air_d,
          lnair, lncrew, rh_lag,  rh_max, agric_wind_max, agric_wind_avg, wind_speed, wind_speed_max,
@@ -60,29 +60,29 @@ corrplot(corrgram(my.num.data), method = "ellipse")
 # via Katuwal Following Battese (1997) we create dummy variable for zero-resources such
 # that crew_d ¼ 1 if crew ¼ 0 and crew_d ¼ 0 if crew>0. Log of the resources variables
 # are created using: ln(crew) = ln(Max(crew, crew_d)).
-cobbDouglas <- sfa( log( Daily_Held_noneg ) ~ crew_d + air_d + log(pmax( crewtotal, crew_d))
-                     + log(pmax(airtotal, air_d)),
-                      data = join.final.noSWF )
-summary(cobbDouglas)
-
-
-
-cobbDouglasFULL <- sfa(log( Daily_Held_noneg ) ~ crew_d + air_d + log(pmax( crewtotal, crew_d)) + 
-                  log(pmax(airtotal, air_d)) + rh_lag + temp_max + agric_wind_max +  perc_river +
+cobbDouglasFULL <- sfa(log( Daily_Held_noneg ) ~ crew_d + air_d +lncrew + lnair
+                       + rh_lag + temp_max + agric_wind_max +  perc_river +
                   Timber , data = join.final.noSWF )
 summary(cobbDouglasFULL) #remember! dummy vars have opposite interpretation, 1 = not used
 fitted( cobbDouglasFULL )
-join.final.noSWF$fittedcobb <- fitted( cobbDouglasFULL, asInData = TRUE )
-plot(join.final.noSWF$fittedcobb ~ crew_d + air_d + log(pmax( crewtotal, crew_d)) + 
-       log(pmax(airtotal, air_d)), data = join.final.noSWF)
+
+cobb.crew <- sfa(log( Daily_Held_noneg ) ~ crew_d + lncrew + 
+                         + rh_lag + temp_max + agric_wind_max +  perc_river +
+                         Timber , data = join.final.noSWF )
+summary(cobb.crew) #remember! dummy vars have opposite interpretation, 1 = not used
+fitted( cobb.crew )
+
+cobb.air <- sfa(log( Daily_Held_noneg ) ~  air_d + lnair + rh_lag + temp_max + agric_wind_max +  perc_river +
+                   Timber , data = join.final.noSWF )
+summary(cobb.air) #remember! dummy vars have opposite interpretation, 1 = not used
+fitted( cobb.air )
 
 
-
-translogFULL <- frontierQuad(log( Daily_Held_noneg ) ~ crew_d + air_d  
-                + lnair + lncrew + lnair2 + lncrew2 + aircrew
-                + rh_lag + temp_max + agric_wind_max +  perc_river +
-                  Timber + relativedays, data = join.final.noSWF)
-summary(translogFULL)
+# translogFULL <- frontierQuad(log( Daily_Held_noneg ) ~ crew_d + air_d  
+#                 + lnair + lncrew + lnair2 + lncrew2 + aircrew
+#                 + rh_lag + temp_max + agric_wind_max +  perc_river +
+#                   Timber + relativedays, data = join.final.noSWF)
+# summary(translogFULL)
 
 #Test to see which is better functional form
 #Sandeep's notes: (need to somehow call parameters from model output) 
@@ -112,30 +112,50 @@ efficiencies(fireTimeVar)
 
 # Technical Efficiency Effects Frontier (Battese & Coelli 1995)
 # (efficiency effects model with intercept)
-
-fireZ <- sfa(log( Daily_Held_noneg ) ~ crew_d + air_d  
+fireZ <- sfa(log( Daily_Held_noneg ) ~ crew_d + air_d 
              + lnair + lncrew
-             | temp_max + agric_wind_max + rain_total.y, data = firePanel )
+             | temp_max + agric_wind_max + rain_total.y + dewpoint_max, data = firePanel )
 summary(fireZ)
-
 efficiencies(fireZ)
 fitted( fireZ )
-firePanel$fittedZ <- fitted( fireZ, asInData = TRUE )
-plot(firePanel$fittedZ)
+
+sfacrew <- sfa(log( Daily_Held_noneg ) ~ crew_d + lncrew
+             | temp_max + agric_wind_max + rain_total.y + dewpoint_max, data = firePanel )
+summary(sfacrew)
+efficiencies(sfacrew)
+fitted(sfacrew)
+
+sfaair<- sfa(log( Daily_Held_noneg ) ~ air_d + lnair 
+               | temp_max + agric_wind_max + rain_total.y + dewpoint_max, data = firePanel )
+summary(sfaair)
+efficiencies(sfaair)
+fitted(sfaair)
+
+#############################################################
+###################  CHECKING FOR COLLINERAITY using VIF ####
+justair <- lm(log( Daily_Held_noneg ) ~ air_d 
+             + lnair + temp_max + agric_wind_max + rain_total.y + dewpoint_max, data = join.final.noSWF )
+justcrew <- lm(log( Daily_Held_noneg ) ~ crew_d
+               + lncrew + temp_max + agric_wind_max + rain_total.y + dewpoint_max, data = join.final.noSWF )
+both <- lm(log( Daily_Held_noneg ) ~ crew_d + air_d 
+              + lnair + lncrew + temp_max + agric_wind_max + rain_total.y + dewpoint_max, data = join.final.noSWF )
+library("car")
+vif(justair)
+vif(justcrew)
+vif(both)
 
 
-
-
-
-fireZ.trans <- frontierQuad(log( Daily_Held_noneg ) ~ crew_d + air_d  
-             + lnair + lncrew + lnair2 + lncrew2 + aircrew 
-             | rh_lag + agric_wind_max + temp_max + rain_total.y
-             + perc_river + relativedays , data = firePanel )
-summary(fireZ.trans)
-efficiencies(fireZ.trans)
-fitted( fireZ.trans )
-firePanel$fittedZ.trans <- fitted( fireZ.trans, asInData = TRUE )
-plot(firePanel$fittedZ.trans)
+# 
+# 
+# fireZ.trans <- frontierQuad(log( Daily_Held_noneg ) ~ crew_d + air_d  
+#              + lnair + lncrew + lnair2 + lncrew2 + aircrew 
+#              | rh_lag + agric_wind_max + temp_max + rain_total.y
+#              + perc_river + relativedays , data = firePanel )
+# summary(fireZ.trans)
+# efficiencies(fireZ.trans)
+# fitted( fireZ.trans )
+# firePanel$fittedZ.trans <- fitted( fireZ.trans, asInData = TRUE )
+# plot(firePanel$fittedZ.trans)
 
 
 #rejecting the null means the larger/ non-nested model is a better fit
@@ -156,10 +176,10 @@ fireZ2 <- sfa( log( Daily_Held_noneg ) ~ crew_d + air_d + log(pmax( crewtotal, c
 summary( fireZ2 )
 efficiencies( fireZ2 )
 
-plot(log(Daily_Held_noneg) ~ crew_d + air_d + log(pmax( crewtotal, crew_d)) + log(pmax(airtotal, air_d)),
-     type = "p", col = "red", ylim = c(0,1), data = firePanel)
-x.seq <- seq(0, 1, by = 0.01)
-lines( log(Daily_Held_noneg) ~ x.seq, col = "blue", data=firePanel)
+# plot(log(Daily_Held_noneg) ~ crew_d + air_d + log(pmax( crewtotal, crew_d)) + log(pmax(airtotal, air_d)),
+#      type = "p", col = "red", ylim = c(0,1), data = firePanel)
+# x.seq <- seq(0, 1, by = 0.01)
+# lines( log(Daily_Held_noneg) ~ x.seq, col = "blue", data=firePanel)
 
 
 
